@@ -1,0 +1,68 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Simulation Results</title>
+        <style>
+        body { font-family: Arial; background-color: #f5f7fa; padding: 40px; }
+        h1 { text-align: center; color: #222; }
+        .section { margin-bottom: 40px; }
+        .metric-card { background: white; padding: 15px 25px; margin: 15px 0; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        img { display: block; margin: 20px auto; max-width: 80%; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+        </style>
+    </head>
+    <body>
+        <h1>📊 Simulation Results</h1>
+        <div id="summary">
+            
+        <div class="metric-card">
+            <h3>p1</h3>
+            <p><b>Mean Latency:</b> 1.91 ms</p>
+            <p><b>Median Latency:</b> 1.00 ms</p>
+            <p><b>95th Percentile Latency:</b> 4.00 ms</p>
+            <p><b>Packet Delivery Ratio (PDR):</b> 1.6452</p>
+        </div>
+        
+        <div class="metric-card">
+            <h3>p2</h3>
+            <p><b>Mean Latency:</b> 3.28 ms</p>
+            <p><b>Median Latency:</b> 1.00 ms</p>
+            <p><b>95th Percentile Latency:</b> 10.00 ms</p>
+            <p><b>Packet Delivery Ratio (PDR):</b> 1.0000</p>
+        </div>
+        
+        <div class="metric-card">
+            <h3>patient-1</h3>
+            <p><b>Mean Latency:</b> 2.32 ms</p>
+            <p><b>Median Latency:</b> 1.00 ms</p>
+            <p><b>95th Percentile Latency:</b> 5.00 ms</p>
+            <p><b>Packet Delivery Ratio (PDR):</b> 1.5174</p>
+        </div>
+        
+        <div class="metric-card">
+            <h3>patient-2</h3>
+            <p><b>Mean Latency:</b> 2.37 ms</p>
+            <p><b>Median Latency:</b> 1.00 ms</p>
+            <p><b>95th Percentile Latency:</b> 5.00 ms</p>
+            <p><b>Packet Delivery Ratio (PDR):</b> 1.5131</p>
+        </div>
+        
+        <div class="metric-card">
+            <h3>patient-3</h3>
+            <p><b>Mean Latency:</b> 2.28 ms</p>
+            <p><b>Median Latency:</b> 1.00 ms</p>
+            <p><b>95th Percentile Latency:</b> 5.00 ms</p>
+            <p><b>Packet Delivery Ratio (PDR):</b> 1.5136</p>
+        </div>
+        
+        </div>
+        <div class="section">
+            <h2>Generated Plots</h2>
+            <img src="../plots/latency_hist.png" alt="Latency Histogram">
+            <img src="../plots/latency_cdf.png" alt="Latency CDF">
+            <img src="../plots/jitter_hist.png" alt="Jitter Histogram">
+            <img src="../plots/pdr_bar.png" alt="PDR Bar Chart">
+        </div>
+    </body>
+    </html>
+    

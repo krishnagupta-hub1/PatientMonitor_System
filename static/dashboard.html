@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Doctor's Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: row;
+      background-color: #f4f6f8;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: #212529;
+      color: #fff;
+      padding-top: 20px;
+      border-right: 1px solid #444;
+    }
+    .sidebar h4 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .sidebar a {
+      display: block;
+      padding: 12px 20px;
+      color: #ddd;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    .sidebar a:hover {
+      background-color: #343a40;
+      color: #fff;
+    }
+
+    #patient-links a {
+      color: #ffc107;
+      padding-left: 25px;
+    }
+    #patient-links a:hover {
+      color: #fff;
+      background: #495057;
+    }
+
+    .main {
+      flex: 1;
+      padding: 25px;
+    }
+
+    .summary-cards .card {
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .patient-card {
+      border-radius: 12px;
+      margin-bottom: 15px;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+    .patient-card:hover {
+      transform: scale(1.02);
+      background-color: #e9ecef;
+    }
+    .patient-vital { font-weight: bold; }
+    .alert-low { color: #dc3545; }
+    .alert-mid { color: #fd7e14; }
+
+    #logs {
+      max-height: 250px;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+    .alert-log {
+      background: #ffecec;
+      padding: 6px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      border-left: 4px solid #dc3545;
+      font-size: 14px;
+    }
+
+    #status {
+      font-weight: 600;
+      color: #198754;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <h4>Doctor Panel</h4>
+    <a href="#">🏠 Dashboard</a>
+    <div id="patient-links">
+      <!-- Dynamic patient links will appear here -->
+    </div>
+    <hr style="border-color:#666;">
+    <a href="#" id="link-appointments">📅 Appointments</a>
+    <a href="#" id="link-medications">💊 Medications</a>
+  
+    <a href="#" onclick="showReports()">📊 Reports</a>
+    <a href="#">⚙️ Settings</a>
+  </div>
+
+  <div class="main" id="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Real-Time Patient Monitoring</h2>
+      <div id="status">Connecting...</div>
+    </div>
+
+    <div class="row summary-cards g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Total Patients</h6>
+            <h3 id="total-patients">0</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>New Visits Today</h6>
+            <h3 id="new-visits">3</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center">
+          <div class="card-body">
+            <h6>Appointments</h6>
+            <h3 id="appointments">7</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4>Active Patients</h4>
+    <div class="row" id="patient-container"></div>
+
+    <h4 class="mt-4">Recent Alerts</h4>
+    <div id="logs"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const ws = new WebSocket("ws://" + location.host + "/ws/dashboard");
+const patients = {};
+
+function addLog(text) {
+  const d = document.getElementById("logs");
+  const p = document.createElement("div");
+  p.textContent = new Date().toLocaleTimeString() + " — " + text;
+  p.className = 'alert-log';
+  d.prepend(p);
+}
+
+function addPatientLink(pid) {
+  const container = document.getElementById('patient-links');
+  const link = document.createElement('a');
+  link.href = `patient.html?pid=${pid}`;
+  link.textContent = `🩺 ${pid}`;
+  container.appendChild(link);
+}
+
+function createChart(ctx, label, color) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label, data: [], borderColor: color, fill: false, tension: 0.3 }] },
+    options: {
+      animation: false,
+      scales: { x: { display: false }, y: { display: true } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function createPatientCard(pid) {
+  const container = document.getElementById('patient-container');
+  const col = document.createElement('div');
+  col.className = 'col-md-6';
+  const card = document.createElement('div');
+  card.className = 'card patient-card';
+  card.id = 'card-' + pid;
+  card.innerHTML = `
+    <div class="card-body">
+      <div class="d-flex justify-content-between">
+        <h5>${pid}</h5>
+        <div>Seq: <span class="seq">-</span> | Latency: <span class="lat">-</span> ms</div>
+      </div>
+      <div class="row mt-2">
+        <div class="col-md-6">
+          <p>ECG: <span class="patient-vital ecg">-</span></p>
+          <canvas id="ecg-chart-${pid}"></canvas>
+        </div>
+        <div class="col-md-6">
+          <p>SpO₂: <span class="patient-vital spo2">-</span></p>
+          <canvas id="spo2-chart-${pid}"></canvas>
+        </div>
+      </div>
+    </div>`;
+  col.appendChild(card);
+  container.appendChild(col);
+
+  const ecgChart = createChart(document.getElementById(`ecg-chart-${pid}`), 'ECG', '#0d6efd');
+  const spo2Chart = createChart(document.getElementById(`spo2-chart-${pid}`), 'SpO₂', '#198754');
+  return { ecgChart, spo2Chart };
+}
+
+function showReports() {
+  document.getElementById("main-content").innerHTML = `
+    <iframe src="/reports" style="width:100%; height:90vh; border:none;"></iframe>
+  `;
+}
+
+function updatePatientCard(pid, obj) {
+  const card = document.getElementById('card-' + pid);
+  if (!card) return;
+  const payload = obj.payload || {};
+  const spo2 = payload.spo2;
+  const ecg = payload.ecg;
+
+  card.querySelector('.ecg').textContent = ecg ?? '-';
+  card.querySelector('.spo2').textContent = spo2 ?? '-';
+  card.querySelector('.lat').textContent = obj.latency_ms ?? '-';
+  card.querySelector('.seq').textContent = obj.seq ?? '-';
+
+  const charts = patients[pid].charts;
+  const time = new Date().toLocaleTimeString().split(" ")[0];
+
+  // ECG chart
+  const ecgData = charts.ecgChart.data;
+  ecgData.labels.push(time);
+  ecgData.datasets[0].data.push(ecg);
+  if (ecgData.labels.length > 20) { ecgData.labels.shift(); ecgData.datasets[0].data.shift(); }
+  charts.ecgChart.update();
+
+  // SpO₂ chart
+  const spo2Data = charts.spo2Chart.data;
+  spo2Data.labels.push(time);
+  spo2Data.datasets[0].data.push(spo2);
+  if (spo2Data.labels.length > 20) { spo2Data.labels.shift(); spo2Data.datasets[0].data.shift(); }
+  charts.spo2Chart.update();
+
+  const spo2El = card.querySelector('.spo2');
+  spo2El.classList.remove('alert-low', 'alert-mid');
+  if (spo2 < 92) {
+    spo2El.classList.add('alert-low');
+    addLog(`${pid} ALERT: SpO₂ ${spo2}`);
+  } else if (spo2 < 95) {
+    spo2El.classList.add('alert-mid');
+  }
+
+  if (ecg > 140) addLog(`${pid} ALERT: HR=${ecg}`);
+}
+
+function loadPage(url) {
+  const main = document.querySelector('.main');
+  main.innerHTML = `<iframe src="${url}" style="width:100%;height:90vh;border:none;"></iframe>`;
+}
+
+document.getElementById('link-appointments').onclick = () => loadPage('/static/appointments.html');
+document.getElementById('link-medications').onclick = () => loadPage('/static/medications.html');
+
+
+ws.onopen = () => {
+  document.getElementById('status').textContent = "🟢 Connected";
+  addLog("Dashboard connected.");
+};
+
+ws.onclose = () => {
+  document.getElementById('status').textContent = "🔴 Disconnected";
+  addLog("Dashboard disconnected.");
+};
+
+ws.onmessage = (ev) => {
+  const obj = JSON.parse(ev.data);
+  const pid = obj.patient_id || "unknown";
+
+  // If new patient — add link and card
+  if (!patients[pid]) {
+    const charts = createPatientCard(pid);
+    patients[pid] = { charts };
+    addPatientLink(pid);
+    document.getElementById("total-patients").textContent = Object.keys(patients).length;
+  }
+
+  updatePatientCard(pid, obj);
+};
+</script>
+</body>
+</html>
